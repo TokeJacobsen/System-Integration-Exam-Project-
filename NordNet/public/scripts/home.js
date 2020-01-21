@@ -4,20 +4,20 @@ $(document).ready(function() {
     $.ajaxSetup({async: false});
     $.get("https://api.worldtradingdata.com/api/v1/stock?symbol=SNAP,TWTR,VOD.L&api_token=demo", function(data, status){
 
-        stockArray = data.data;  
+        stockArray = data.data;
     })
+    var stocks = {}
+
 
     var portfolio = {}
     var balance = 1000;
 
-    setInterval(()=> {console.log("from interval"+JSON.stringify(portfolio))},3000)
-
     
     $("#balance").text(balance)
 
-    var stocks = []
 
     for (let index = 0; index < stockArray.length; index++) {
+        
         let element = stockArray[index];
 
         var today = new Date();
@@ -25,7 +25,7 @@ $(document).ready(function() {
         var time = checkTime(today.getHours()) + ":" + checkTime(today.getMinutes()) + ":" + checkTime(today.getSeconds())
         var timeStamp = ""+date + " " + time
 
-        stocks.push({"name": element.name, "symbol": element.symbol, "price":element.price, "lastUpdated": timeStamp })
+        stocks[element.symbol] = {"name": element.name, "price":element.price, "lastUpdated": timeStamp }
 
         $("#stock-list").append("<li style='font-size: 20px; font-weight: bold;'>"+
         element.name+" "+element.symbol+" "+element.price+ "$ updated at: " + timeStamp +
@@ -34,13 +34,15 @@ $(document).ready(function() {
     }
 
     
-    function buyStock(element, quantity){
+    function buyStock(stockItem, quantity){
         var today = new Date();
         var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
         var time = checkTime(today.getHours()) + ":" + checkTime(today.getMinutes()) + ":" + checkTime(today.getSeconds())
         var timeStamp = ""+date + " " + time
+        element = stocks[stockItem]
 
         let price = element.price*quantity;
+
         if(balance -price < 0){
             alert("Can't afford! Transfer more money")
             return
@@ -48,25 +50,37 @@ $(document).ready(function() {
         balance = balance -price
         $("#balance").text(balance)
 
-        if(portfolio[element.symbol] != undefined){
-            portfolio[element.symbol].quantity = (parseInt(portfolio[element.symbol].quantity, 10)+parseInt(quantity,10)).toString()
+        if(portfolio[stockItem] != undefined){
+            portfolio[stockItem].quantity = (parseFloat(portfolio[stockItem].quantity, 10)+parseFloat(quantity,10))
+            portfolio[stockItem].boughtValue = (parseFloat(portfolio[stockItem].boughtValue, 10) + price)
         }
         else{
+            portfolio[stockItem] = {"name":element.name, "quantity": quantity, "boughtValue":price}
 
-            portfolio[element.symbol] = {"name":element.name, "quantity": quantity}
         }
         $("#portfolio").empty();
         for (var key in portfolio) {
-            if (portfolio.hasOwnProperty(key)) {           
+            if (portfolio.hasOwnProperty(key)) {        
                 $("#portfolio").append("<li style='font-size: 20px; font-weight;'>"+
-                portfolio[key].quantity +"x " +portfolio[key].name+" "+key+  "</li><button id='sell"+element.symbol+"'class ='sell'>Sell</button>" ) 
+                portfolio[key].quantity +"x " +portfolio[key].name+" "+key+ "</li><button id='sell"+stockItem+"'class ='sell'>Sell</button>" ) 
             }
         }
 
 
         $(".sell").click(function() {
             let chosenStock = this.id.substring(4)
-            let value = parseInt(portfolio[chosenStock].quantity,10) * (stocks.find(element => element.symbol == chosenStock)).price
+            let value = parseFloat(portfolio[chosenStock].quantity,10) * (stocks[chosenStock]).price
+
+            if(parseFloat(portfolio[chosenStock].boughtValue, 10) > value ){
+                alert("You lost money, nothing to report to the tax!")
+            }
+            else if(parseFloat(portfolio[chosenStock].boughtValue, 10) == value ){
+                alert("You got your money back and nothing else. Nothing to report to tax")
+            }
+            else{
+                alert("You made money! " + (value - parseFloat(portfolio[chosenStock].boughtValue, 10))+ " reported to the tax agency")
+            }
+
             delete portfolio[chosenStock];
             balance = balance +value
             $("#balance").text(balance)
@@ -75,8 +89,9 @@ $(document).ready(function() {
             for (var key in portfolio) {
                 if (portfolio.hasOwnProperty(key)) {           
                     $("#portfolio").append("<li style='font-size: 20px; font-weight;'>"+
-                    portfolio[key].quantity +"x " +portfolio[key].name+" "+key+  "</li><button id='sell"+element.symbol+"'class ='sell'>Sell</button>" ) 
+                    portfolio[key].quantity +"x " +portfolio[key].name+" "+key+  "</li><button id='sell"+key+"'class ='sell'>Sell</button>" ) 
                 }
+                
             }
         });
 
@@ -84,8 +99,8 @@ $(document).ready(function() {
 
 
     $(".stock").click(function() {
-        let chosenStock = stocks.find(element => element.symbol == this.id)
-        let quantity = $("#input"+chosenStock.symbol).val()
+        let chosenStock = this.id
+        let quantity = $("#input"+jq(chosenStock)).val()
         buyStock(chosenStock,quantity)
       });
   
@@ -93,11 +108,12 @@ $(document).ready(function() {
     setInterval(updateStocks,10000)
 
     function updateStocks (){
+
         $("#stock-list").empty();
-        for (let index = 0; index < stocks.length; index++) {
-            let element = stockArray[index];
+
+        for (var element in stocks) {
             let influence = Math.random() *  (1.2 - 0.8) + 0.8; 
-            element.price = Math.round((element.price * influence) * 100) / 100
+            stocks[element].price = Math.round((stocks[element].price * influence) * 100) / 100
 
             var today = new Date();
             var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
@@ -108,32 +124,41 @@ $(document).ready(function() {
             if (influence >= 1){
                 
                 $("#stock-list").append("<li style='color:green; font-size: 20px; font-weight: bold;'>"+
-                element.name+" "+element.symbol+" "+element.price+"$ updated at: " + timeStamp +
-                "</li><input type='number' id ='input"+element.symbol+"' style='width:30px'></input ><button id='"+element.symbol+"' class = 'stock2'>Buy</button>")
+                stocks[element].name+" "+element+" "+stocks[element].price+"$ updated at: " + timeStamp +
+                "</li><input type='number' id ='input"+element+"' style='width:30px'></input ><button id='"+element+"' class = 'stock2'>Buy</button>")
             }
             else{
                 $("#stock-list").append("<li style='color:red; font-size: 20px; font-weight: bold;'>"+
-                element.name+" "+element.symbol+" "+element.price+"$ updated at: " + timeStamp +
-                "</li><input type='number' id ='input"+element.symbol+"' style='width:30px'></input> <button id='"+element.symbol+"'class ='stock2'>Buy</button>")
+                stocks[element].name+" "+element+" "+stocks[element].price+"$ updated at: " + timeStamp +
+                "</li><input type='number' id ='input"+element+"' style='width:30px'></input> <button id='"+element+"'class ='stock2'>Buy</button>")
             }
             
-            stocks[index] =  {"name": element.name, "symbol": element.symbol, "price":element.price, "lastUpdated": timeStamp }
+            stocks[element] =  {"name": stocks[element].name, "price":stocks[element].price, "lastUpdated": timeStamp }
 
-    
         }
+
         $(".stock2").click(function() {
-            let chosenStock = stocks.find(element => element.symbol == this.id)
-            let quantity = $("#input"+chosenStock.symbol).val()
+            let chosenStock = this.id
+            let quantity = $("#input"+jq(chosenStock)).val()
             buyStock(chosenStock,quantity)          
         });
     }
 
-    
-
-
     function checkTime(i) {
         return (i < 10) ? "0" + i : i;
     }
+
+    function jq( myid ) {
+ 
+        return ""+myid.replace( /(:|\.|\[|\]|,|=|@)/g, "\\$1" );
+     
+    }
+
+    function getPercentageChange(oldNumber, newNumber){
+        var decreaseValue = oldNumber - newNumber;
+        return (decreaseValue/oldNumber)*100
+    }
+
 
 })
 
