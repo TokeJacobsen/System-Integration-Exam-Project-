@@ -17,6 +17,8 @@
 
 // Function to be called from iframe
 async function parentFunc(message) {
+  
+  localStorage.setItem("token", message);
   sendToken(message);
   //const response = await fetch('http://localhost:82/validate/'+message);
   //const myJson = await response.json();  

@@ -36,12 +36,21 @@ namespace SkatAPI.Controllers
             SqlConnection conn = new SqlConnection();
             conn.ConnectionString = @"Data Source = (localdb)\MSSQLLocalDB; Initial Catalog = SysIntTax; Integrated Security = True;";
             conn.Open();
-
-            SqlCommand command = new SqlCommand("UPDATE dbo.Citizens set taxOwed = taxOwed + " + input.Money + " WHERE id = '" + email + "'", conn);
+            
+            SqlCommand command = new SqlCommand("UPDATE dbo.Citizens set taxOwed = taxOwed + "+input.Money+" WHERE id = '" + email + "'", conn);
             command.ExecuteNonQuery();
 
+            command.CommandText = "SELECT taxOwed from dbo.Citizens WHERE id = '"+email+"'";
+            SqlDataReader reader = command.ExecuteReader();
+            String taxOwedOutput = "";
+            while (reader.Read())
+            {
+                var taxOwed = reader["taxOwed"];
+                taxOwedOutput = taxOwed.ToString();
+            }
 
-            return Ok(new { message = input.Money +" is added to your taxrecord" });
+            conn.Close();
+            return Ok(new { statuscode = 200, message = input.Money + " is added to your taxrecord" , taxOwed = taxOwedOutput });
         }
 
         [HttpGet]

@@ -7,13 +7,13 @@ namespace SkatAPI.Models
 {
     public class TaxInput
     {
-        public TaxInput(float money, string token)
+        public TaxInput(string money, string token)
         {
             Money = money;
             Token = token;
         }
 
-        public float Money { get; set; }
+        public String Money { get; set; }
         public String Token { get; set; }
 
     }
