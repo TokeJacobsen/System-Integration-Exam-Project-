@@ -49,7 +49,7 @@ $(document).ready(function() {
             alert("Can't afford! Transfer more money")
             return
         }
-        balance = balance -price
+        balance = round(balance -price)
         $("#balance").text(balance)
 
         if(portfolio[stockItem] != undefined){
@@ -64,7 +64,7 @@ $(document).ready(function() {
         for (var key in portfolio) {
             if (portfolio.hasOwnProperty(key)) {        
                 $("#portfolio").append("<li style='font-size: 20px; font-weight;'>"+
-                portfolio[key].quantity +"x " +portfolio[key].name+" "+key+ "</li><button id='sell"+stockItem+"'class ='sell'>Sell</button>" ) 
+                portfolio[key].quantity +"x " +portfolio[key].name+" "+key+ "</li><button id='sell"+key+"'class ='sell'>Sell</button>" ) 
             }
         }
 
@@ -84,20 +84,18 @@ $(document).ready(function() {
                 alert("You made money! " + taxData + " reported to the tax agency")
                 $.post( "http://localhost:81/SendTaxData", { token: Usertoken, money: taxData })
                 .done(function( data ) {
-                if( data.statuscode == 200 ){
-                    alert("You now owe " + round(parseFloat(data.taxOwed.replace(",","."))) + "$ in tax")
-                        
-                }
-        })
+                    if( data.statuscode == 200 ){
+                        alert("You now owe " + round(parseFloat(data.taxOwed.replace(",","."))) + "$ in tax")
+                    }
+                })
             }
-
             delete portfolio[chosenStock];
             balance = balance +value
             $("#balance").text(balance)
 
             $("#portfolio").empty()
             for (var key in portfolio) {
-                if (portfolio.hasOwnProperty(key)) {           
+                if (portfolio.hasOwnProperty(key)) {   
                     $("#portfolio").append("<li style='font-size: 20px; font-weight;'>"+
                     portfolio[key].quantity +"x " +portfolio[key].name+" "+key+  "</li><button id='sell"+key+"'class ='sell'>Sell</button>" ) 
                 }
